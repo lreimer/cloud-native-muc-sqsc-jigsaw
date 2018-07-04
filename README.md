@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/lreimer/cloud-native-muc-sqsc-jigsaw.svg?branch=master)](https://travis-ci.org/lreimer/cloud-native-muc-sqsc-jigsaw)
+
 # Enterprise Cloud Native for SME - Jigsaw Service
 
 Simple Java Jigsaw demo service for the Cloud Native Night with SquareScale.
