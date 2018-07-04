@@ -1,0 +1,86 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+repositories {
+    jcenter()
+}
+
+afterEvaluate {
+    compileJava {
+        doFirst {
+            options.compilerArgs = [
+                    '--module-path', classpath.asPath,
+            ]
+            classpath = files()
+        }
+    }
+}
+
+import java.util.regex.Matcher
+
+sourceCompatibility = 9
+targetCompatibility = 9
+
+ext.javaHome = System.properties['java.home']
+ext.moduleName = 'de.qaware.oss.cloud.service'
+
+mainClassName = "$moduleName/de.qaware.oss.cloud.service.JigsawService"
+
+run {
+    inputs.property("moduleName", moduleName)
+    doFirst {
+        jvmArgs = [
+                '--module-path', classpath.asPath,
+                '--module', mainClassName
+        ]
+        classpath = files()
+    }
+}
+
+startScripts {
+    inputs.property("moduleName", moduleName)
+    doFirst {
+        classpath = files()
+        defaultJvmOpts = [
+                '--module-path', 'APP_HOME_LIBS',
+                '--module', mainClassName
+        ]
+    }
+    doLast{
+        def bashFile = new File(outputDir, applicationName)
+        String bashContent = bashFile.text
+        bashFile.text = bashContent.replaceFirst('APP_HOME_LIBS', Matcher.quoteReplacement('$APP_HOME/lib'))
+
+        def batFile = new File(outputDir, applicationName + ".bat")
+        String batContent = batFile.text
+        batFile.text = batContent.replaceFirst('APP_HOME_LIBS', Matcher.quoteReplacement('%APP_HOME%\\lib'))
+    }
+}
+
+task jlink(type:Exec) {
+    ext.outputDir = file("$buildDir/jlink")
+    inputs.files(configurations.runtimeClasspath)
+    inputs.files(jar.archivePath)
+    outputs.dir(outputDir)
+
+    doFirst {
+        outputDir.deleteDir()
+        commandLine "$javaHome/bin/jlink",
+                '--module-path',
+                "$javaHome/jmods/:${configurations.runtimeClasspath.asPath}:${jar.archivePath}",
+                '--add-modules', moduleName,
+                '--launcher', "jigsaw-service=$mainClassName",
+                '--bind-services',
+                '--limit-modules', 'java.logging,jdk.httpserver',
+                '--compress=2', '--vm=server',
+                '--strip-debug',
+                '--output', outputDir,
+                '--verbose'
+
+    }
+}
+
+build.dependsOn distZip, distTar
+build.finalizedBy jlink
